@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chalk — Lesson Engine</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #07070e;
+            --surface: #0c0c18;
+            --card: #10101e;
+            --card2: #141428;
+            --border: rgba(130, 130, 220, 0.10);
+            --border2: rgba(130, 130, 220, 0.18);
+            --text: #e0e0f2;
+            --muted: #7070a0;
+            --dim: #40405a;
+            --radius: 12px;
+            --rsm: 8px;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+            opacity: .4;
+        }
+
+        /* Header */
+        header {
+            position: relative;
+            padding: 44px 48px 32px;
+            border-bottom: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        header::after {
+            content: '';
+            position: absolute;
+            top: -60px;
+            left: -60px;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(0, 212, 170, 0.07) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .header-inner {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .wordmark {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            font-size: 2.4rem;
+            letter-spacing: -0.04em;
+            line-height: 1;
+        }
+
+        .wordmark span {
+            color: #00d4aa;
+        }
+
+        .tagline {
+            font-size: 0.8rem;
+            color: var(--muted);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-top: 6px;
+            font-weight: 300;
+        }
+
+        .header-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--muted);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 6px 12px;
+            border-radius: 100px;
+            letter-spacing: 0.04em;
+        }
+
+        /* Main */
+        main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 32px 48px 80px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Config panel */
+        .config-panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px 32px;
+            margin-bottom: 20px;
+        }
+
+        .section-label {
+            font-family: 'Syne', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--muted);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 18px;
+        }
+
+        /* Engine selectors */
+        .engine-row {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 16px;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .engine-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .engine-selector label {
+            font-size: 0.68rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 500;
+        }
+
+        .engine-select-wrap {
+            position: relative;
+        }
+
+        .engine-select-wrap select {
+            width: 100%;
+            appearance: none;
+            cursor: pointer;
+            background: var(--card);
+            border: 2px solid var(--border2);
+            border-radius: var(--rsm);
+            color: var(--text);
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 0.95rem;
+            padding: 12px 40px 12px 16px;
+            outline: none;
+            transition: border-color .2s, box-shadow .2s;
+        }
+
+        .engine-select-wrap select:focus {
+            box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.15);
+        }
+
+        .engine-select-wrap::after {
+            content: '⌄';
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-55%);
+            color: var(--muted);
+            pointer-events: none;
+            font-size: 1rem;
+        }
+
+        .engine-select-wrap select option {
+            background: var(--card2);
+        }
+
+        .vs-divider {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            font-size: 0.85rem;
+            color: var(--dim);
+            letter-spacing: 0.08em;
+            text-align: center;
+            padding: 8px 0;
+        }
+
+        .engine-color-bar {
+            height: 3px;
+            border-radius: 2px;
+            margin-top: 6px;
+            transition: background .3s;
+        }
+
+        /* Lesson config */
+        .lesson-grid {
+            display: grid;
+            grid-template-columns: 1.6fr 1fr 1fr 2fr;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+
+        .field label {
+            font-size: 0.7rem;
+            color: var(--muted);
+            font-weight: 500;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .field select,
+        .field input,
+        .field textarea {
+            background: var(--card);
+            border: 1px solid var(--border2);
+            border-radius: var(--rsm);
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            padding: 10px 14px;
+            outline: none;
+            width: 100%;
+            transition: border-color .2s, box-shadow .2s;
+            appearance: none;
+        }
+
+        .field select:focus,
+        .field input:focus,
+        .field textarea:focus {
+            border-color: #00d4aa;
+            box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.12);
+        }
+
+        .field select option {
+            background: var(--card2);
+        }
+
+        .field textarea {
+            resize: vertical;
+            min-height: 70px;
+        }
+
+        /* Teacher context */
+        .ctx-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.76rem;
+            color: var(--muted);
+            cursor: pointer;
+            user-select: none;
+            width: fit-content;
+            margin-bottom: 14px;
+            transition: color .2s;
+        }
+
+        .ctx-toggle:hover {
+            color: var(--text);
+        }
+
+        .ctx-toggle svg {
+            transition: transform .25s;
+        }
+
+        .ctx-toggle.open svg {
+            transform: rotate(90deg);
+        }
+
+        .ctx-fields {
+            display: none;
+            grid-template-columns: 1fr 1fr 2fr;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+
+        .ctx-fields.open {
+            display: grid;
+        }
+
+        /* Generate button */
+        .btn-generate {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: var(--rsm);
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 0.95rem;
+            letter-spacing: 0.03em;
+            cursor: pointer;
+            transition: opacity .2s, transform .15s, box-shadow .2s;
+            background: linear-gradient(135deg, #00d4aa 0%, #00b894 100%);
+            color: #07070e;
+        }
+
+        .btn-generate:hover {
+            opacity: .9;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 32px rgba(0, 212, 170, 0.25);
+        }
+
+        .btn-generate:active {
+            transform: translateY(0);
+        }
+
+        .btn-generate:disabled {
+            opacity: .4;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-generate .spinner {
+            display: none;
+            width: 16px;
+            height: 16px;
+            margin: 0 auto;
+            border: 2px solid rgba(0, 0, 0, .3);
+            border-top-color: #07070e;
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+        }
+
+        .btn-generate.loading .btn-text {
+            display: none;
+        }
+
+        .btn-generate.loading .spinner {
+            display: block;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Stats bar */
+        .stats-bar {
+            display: none;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 18px 28px;
+            margin-bottom: 20px;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            gap: 24px;
+            animation: fadeUp .4s ease both;
+        }
+
+        .stats-bar.visible {
+            display: grid;
+        }
+
+        .stat-group {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .stat-label {
+            font-size: 0.67rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .stats-divider {
+            text-align: center;
+        }
+
+        .delta-pill {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 100px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.76rem;
+            font-weight: 500;
+        }
+
+        /* Results */
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        /* Skeleton */
+        .skeleton-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px;
+            display: none;
+            animation: fadeUp .3s ease both;
+        }
+
+        .skeleton-card.visible {
+            display: block;
+        }
+
+        .skel {
+            border-radius: 6px;
+            background: linear-gradient(90deg, var(--card) 25%, var(--card2) 50%, var(--card) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.6s infinite;
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 200% 0
+            }
+
+            100% {
+                background-position: -200% 0
+            }
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(12px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        /* Result card */
+        .result-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            display: none;
+            animation: fadeUp .45s ease both;
+        }
+
+        .result-card.visible {
+            display: block;
+        }
+
+        .card-accent {
+            height: 2px;
+            width: 100%;
+        }
+
+        .card-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .model-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .model-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .model-name {
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        .model-sub {
+            font-size: 0.7rem;
+            color: var(--muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .local-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            background: rgba(167, 139, 250, 0.12);
+            color: #a78bfa;
+            border: 1px solid rgba(167, 139, 250, 0.2);
+            padding: 2px 8px;
+            border-radius: 100px;
+            margin-left: 6px;
+        }
+
+        .gate-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            font-weight: 500;
+            padding: 4px 12px;
+            border-radius: 100px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .gate-badge.pass {
+            background: rgba(0, 212, 170, 0.12);
+            color: #00d4aa;
+            border: 1px solid rgba(0, 212, 170, 0.25);
+        }
+
+        .gate-badge.fail {
+            background: rgba(255, 107, 107, 0.12);
+            color: #ff6b6b;
+            border: 1px solid rgba(255, 107, 107, 0.25);
+        }
+
+        /* CEO section */
+        .ceo-section {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .ceo-metric {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .ceo-metric-label {
+            font-size: 0.67rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 500;
+        }
+
+        .ceo-metric-value {
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 1.3rem;
+            line-height: 1;
+        }
+
+        .ceo-metric-sub {
+            font-size: 0.68rem;
+            color: var(--muted);
+            font-family: 'JetBrains Mono', monospace;
+            margin-top: 2px;
+        }
+
+        /* Content */
+        .content-section {
+            padding: 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .content-section h4 {
+            font-family: 'Syne', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--muted);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+
+        .content-text {
+            font-size: 0.92rem;
+            line-height: 1.7;
+        }
+
+        .content-label {
+            font-size: 0.68rem;
+            font-weight: 500;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 6px;
+            margin-top: 14px;
+        }
+
+        .ai-line {
+            background: var(--card);
+            border-left: 3px solid var(--border2);
+            padding: 10px 14px;
+            border-radius: 0 var(--rsm) var(--rsm) 0;
+            font-size: 0.87rem;
+            color: var(--muted);
+            margin-bottom: 8px;
+            font-style: italic;
+            line-height: 1.5;
+        }
+
+        .outline-item,
+        .q-item {
+            display: flex;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.88rem;
+            line-height: 1.5;
+        }
+
+        .outline-item:last-child,
+        .q-item:last-child {
+            border-bottom: none;
+        }
+
+        .item-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--dim);
+            padding-top: 2px;
+            flex-shrink: 0;
+            width: 20px;
+        }
+
+        .tag-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .tag {
+            background: var(--card);
+            border: 1px solid var(--border2);
+            color: var(--muted);
+            font-size: 0.72rem;
+            padding: 3px 10px;
+            border-radius: 100px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Engineer section */
+        .eng-toggle {
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+            transition: background .15s;
+        }
+
+        .eng-toggle:hover {
+            background: var(--card);
+        }
+
+        .eng-toggle-label {
+            font-size: 0.7rem;
+            color: var(--dim);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .eng-toggle svg {
+            color: var(--dim);
+            transition: transform .25s;
+        }
+
+        .eng-toggle.open svg {
+            transform: rotate(180deg);
+        }
+
+        .eng-body {
+            display: none;
+            padding: 0 24px 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .eng-body.open {
+            display: block;
+        }
+
+        .eng-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            padding-top: 16px;
+        }
+
+        .eng-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .eng-label {
+            font-size: 0.64rem;
+            color: var(--dim);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .eng-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            color: var(--muted);
+            word-break: break-all;
+        }
+
+        /* Error */
+        .error-card {
+            background: var(--surface);
+            border: 1px solid rgba(255, 107, 107, 0.2);
+            border-radius: var(--radius);
+            padding: 28px;
+            text-align: center;
+            display: none;
+            animation: fadeUp .3s ease both;
+        }
+
+        .error-card.visible {
+            display: block;
+        }
+
+        .error-card p {
+            color: #ff6b6b;
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+            line-height: 1.6;
+        }
+
+        @media(max-width:900px) {
+            main {
+                padding: 24px 20px 60px
+            }
+
+            header {
+                padding: 32px 20px 24px
+            }
+
+            .lesson-grid {
+                grid-template-columns: 1fr 1fr
+            }
+
+            .ctx-fields {
+                grid-template-columns: 1fr
+            }
+
+            .results-grid {
+                grid-template-columns: 1fr
+            }
+
+            .stats-bar {
+                grid-template-columns: 1fr;
+                text-align: center
+            }
+
+            .stat-group {
+                justify-content: center;
+                flex-wrap: wrap
+            }
+
+            .engine-row {
+                grid-template-columns: 1fr;
+                gap: 12px
+            }
+
+            .vs-divider {
+                display: none
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="header-inner">
+            <div>
+                <div class="wordmark">chalk<span>.</span></div>
+                <div class="tagline">Rubric-native lesson generation &nbsp;·&nbsp; Fine-tuned specialist vs. general AI
+                </div>
+            </div>
+            <div class="header-badge">Bantrly Internal &nbsp;// v0.1</div>
+        </div>
+    </header>
+
+    <main>
+        <div class="config-panel">
+            <div class="section-label">Engine Comparison</div>
+
+            <div class="engine-row">
+                <div class="engine-selector">
+                    <label>Engine A</label>
+                    <div class="engine-select-wrap">
+                        <select id="engineA" onchange="updateEngineColors()">
+                            <option value="gemini">Gemini 2.5 Flash</option>
+                            <option value="deepseek">DeepSeek V3</option>
+                            <option value="ollama/llama3.1:8b">Llama 3.1 8B — Local</option>
+                            <option value="ollama/mistral:7b">Mistral 7B — Local</option>
+                            <option value="ollama/llama3.2:3b">Llama 3.2 3B — Local</option>
+                            <option value="chalk-phi3">Chalk Phi-3 mini — Fine-tuned</option>
+
+                        </select>
+                    </div>
+                    <div class="engine-color-bar" id="colorBarA"></div>
+                </div>
+
+                <div class="vs-divider">VS</div>
+
+                <div class="engine-selector">
+                    <label>Engine B</label>
+                    <div class="engine-select-wrap">
+                        <select id="engineB" onchange="updateEngineColors()">
+                            <option value="gemini">Gemini 2.5 Flash</option>
+                            <option value="deepseek" selected>DeepSeek V3</option>
+                            <option value="ollama/llama3.1:8b">Llama 3.1 8B — Local</option>
+                            <option value="ollama/mistral:7b">Mistral 7B — Local</option>
+                            <option value="ollama/llama3.2:3b">Llama 3.2 3B — Local</option>
+                            <option value="chalk-phi3">Chalk Phi-3 mini — Fine-tuned</option>
+                        </select>
+                    </div>
+                    <div class="engine-color-bar" id="colorBarB"></div>
+                </div>
+            </div>
+
+            <div class="section-label" style="margin-top:4px">Lesson Configuration</div>
+            <div class="lesson-grid">
+                <div class="field">
+                    <label>Lesson Type</label>
+                    <select id="lesson_type">
+                        <option value="tongue_twister">Tongue Twister</option>
+                        <option value="paragraph_reading">Paragraph Reading</option>
+                        <option value="poem_recitation">Poem Recitation</option>
+                        <option value="story_building">Story Building</option>
+                        <option value="yes_and_improv">Yes-And Improv</option>
+                        <option value="no_but_improv">No-But Improv</option>
+                        <option value="short_speech">Short Speech</option>
+                        <option value="audio_postcard">Audio Postcard</option>
+                        <option value="silly_topic_debate">Silly Topic Debate</option>
+                        <option value="roleplay">Roleplay</option>
+                        <option value="rapid_fire_qa">Rapid Fire Q&amp;A</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Age Group</label>
+                    <select id="age_group">
+                        <option value="child">Child (≤12)</option>
+                        <option value="teen" selected>Teen (13–15)</option>
+                        <option value="youth">Youth (16–18)</option>
+                        <option value="adult">Adult (19+)</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Difficulty</label>
+                    <select id="difficulty">
+                        <option value="easy">Easy</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Topic / Theme</label>
+                    <input type="text" id="topic" placeholder="e.g. S and SH sounds, space exploration…">
+                </div>
+            </div>
+
+            <div class="ctx-toggle" id="ctxToggle" onclick="toggleCtx()">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <polyline points="9 18 15 12 9 6" />
+                </svg>
+                <span>Teacher context &nbsp;(optional)</span>
+            </div>
+            <div class="ctx-fields" id="ctxFields">
+                <div class="field">
+                    <label>Buzzwords / References</label>
+                    <input type="text" id="buzzwords" placeholder="e.g. Taylor Swift, World Cup">
+                </div>
+                <div class="field">
+                    <label>Event / Occasion</label>
+                    <input type="text" id="event_note" placeholder="e.g. First day back after holidays">
+                </div>
+                <div class="field">
+                    <label>Extra Notes</label>
+                    <textarea id="extra_notes" placeholder="Paste a passage or add any notes…"></textarea>
+                </div>
+            </div>
+
+            <button class="btn-generate" id="genBtn" onclick="generateBoth()">
+                <span class="btn-text" id="btnText">⚡ Generate &amp; Compare</span>
+                <div class="spinner"></div>
+            </button>
+        </div>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar" id="statsBar">
+            <div class="stat-group">
+                <div class="stat-item">
+                    <span class="stat-label" id="statLabelA">Engine A</span>
+                    <span class="stat-value" id="statCostA">—</span>
+                    <span class="stat-label">per lesson</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">TA Score</span>
+                    <span class="stat-value" id="statTaA">—</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Time</span>
+                    <span class="stat-value" id="statTimeA">—</span>
+                </div>
+            </div>
+            <div class="stats-divider" id="statsDelta">vs</div>
+            <div class="stat-group" style="justify-content:flex-end">
+                <div class="stat-item" style="text-align:right">
+                    <span class="stat-label">Time</span>
+                    <span class="stat-value" id="statTimeB">—</span>
+                </div>
+                <div class="stat-item" style="text-align:right">
+                    <span class="stat-label">TA Score</span>
+                    <span class="stat-value" id="statTaB">—</span>
+                </div>
+                <div class="stat-item" style="text-align:right">
+                    <span class="stat-label" id="statLabelB">Engine B</span>
+                    <span class="stat-value" id="statCostB">—</span>
+                    <span class="stat-label">per lesson</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div class="results-grid">
+            <div>
+                <div class="skeleton-card" id="skelA">
+                    <div class="skel" style="height:22px;width:160px;margin-bottom:20px"></div>
+                    <div class="skel" style="height:14px;margin-bottom:10px"></div>
+                    <div class="skel" style="height:14px;width:80%;margin-bottom:10px"></div>
+                    <div class="skel" style="height:80px"></div>
+                </div>
+                <div class="result-card" id="cardA"></div>
+                <div class="error-card" id="errA">
+                    <p id="errMsgA">Generation failed.</p>
+                </div>
+            </div>
+            <div>
+                <div class="skeleton-card" id="skelB">
+                    <div class="skel" style="height:22px;width:160px;margin-bottom:20px"></div>
+                    <div class="skel" style="height:14px;margin-bottom:10px"></div>
+                    <div class="skel" style="height:14px;width:80%;margin-bottom:10px"></div>
+                    <div class="skel" style="height:80px"></div>
+                </div>
+                <div class="result-card" id="cardB"></div>
+                <div class="error-card" id="errB">
+                    <p id="errMsgB">Generation failed.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const API = 'http://localhost:8000';
+
+        const ENGINES = {
+            'gemini': { label: 'Gemini 2.5 Flash', sub: 'google', color: '#00d4aa', local: false },
+            'deepseek': { label: 'DeepSeek V3', sub: 'deepseek', color: '#ff6b6b', local: false },
+            'ollama/llama3.1:8b': { label: 'Llama 3.1 8B', sub: 'local · ollama', color: '#a78bfa', local: true },
+            'ollama/mistral:7b': { label: 'Mistral 7B', sub: 'local · ollama', color: '#fbbf24', local: true },
+            'ollama/llama3.2:3b': { label: 'Llama 3.2 3B', sub: 'local · ollama', color: '#60a5fa', local: true },
+            'chalk-phi3': { label: 'Chalk Phi-3 Fine-tuned', sub: 'local · wsl', color: '#f0c040', local: true },
+
+        };
+
+        function getEngine(id) { return ENGINES[id] || { label: id, sub: '', color: '#888', local: false }; }
+
+        function updateEngineColors() {
+            const a = getEngine(document.getElementById('engineA').value);
+            const b = getEngine(document.getElementById('engineB').value);
+            document.getElementById('colorBarA').style.background = a.color;
+            document.getElementById('colorBarB').style.background = b.color;
+            document.getElementById('btnText').innerHTML =
+                `⚡ Compare ${a.label} vs ${b.label}`;
+            document.getElementById('statLabelA').textContent = a.label;
+            document.getElementById('statLabelB').textContent = b.label;
+            document.getElementById('statCostA').style.color = a.color;
+            document.getElementById('statCostB').style.color = b.color;
+            document.getElementById('statTaA').style.color = a.color;
+            document.getElementById('statTaB').style.color = b.color;
+        }
+
+        function toggleCtx() {
+            document.getElementById('ctxToggle').classList.toggle('open');
+            document.getElementById('ctxFields').classList.toggle('open');
+        }
+
+        function toggleEng(side) {
+            document.getElementById('engToggle' + side).classList.toggle('open');
+            document.getElementById('engBody' + side).classList.toggle('open');
+        }
+
+        function buildRequest() {
+            const buzzRaw = document.getElementById('buzzwords').value.trim();
+            return {
+                lesson_type: document.getElementById('lesson_type').value,
+                age_group: document.getElementById('age_group').value,
+                difficulty: document.getElementById('difficulty').value,
+                topic: document.getElementById('topic').value.trim() || 'General',
+                teacher_context: {
+                    buzzwords: buzzRaw ? buzzRaw.split(',').map(s => s.trim()).filter(Boolean) : [],
+                    event_note: document.getElementById('event_note').value.trim() || null,
+                    extra_notes: document.getElementById('extra_notes').value.trim() || null,
+                    book_excerpt: null,
+                }
+            };
+        }
+
+        function showSkel(side) {
+            document.getElementById('skel' + side).classList.add('visible');
+            document.getElementById('card' + side).classList.remove('visible');
+            document.getElementById('err' + side).classList.remove('visible');
+        }
+
+        function hideSkel(side) {
+            document.getElementById('skel' + side).classList.remove('visible');
+        }
+
+        function esc(s) { return String(s).replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+        function renderContent(lessonType, content) {
+            const mainKeys = ['passage', 'text', 'opening_prompt', 'scenario_seed', 'prompt', 'scenario'];
+            const mainKey = mainKeys.find(k => content[k]);
+            let html = '';
+            if (mainKey) html += `<p style="white-space:pre-wrap;font-size:.92rem;line-height:1.7">${esc(content[mainKey])}</p>`;
+            if (content.topic && lessonType !== 'short_speech')
+                html += `<div class="content-label">Topic</div><p style="font-size:.9rem">${esc(content.topic)}</p>`;
+            if (content.ai_lines?.length) {
+                html += `<div class="content-label">AI Lines</div>`;
+                content.ai_lines.forEach(l => { html += `<div class="ai-line">${esc(l)}</div>`; });
+            }
+            if (content.questions?.length) {
+                html += `<div class="content-label">Questions</div>`;
+                content.questions.forEach((q, i) => {
+                    html += `<div class="q-item"><span class="item-num">${i + 1}.</span><span>${esc(q)}</span></div>`;
+                });
+            }
+            if (content.outline?.length) {
+                html += `<div class="content-label">Outline</div>`;
+                content.outline.forEach((p, i) => {
+                    html += `<div class="outline-item"><span class="item-num">${i + 1}.</span><span>${esc(p)}</span></div>`;
+                });
+            }
+            [['continuation_cues', 'Continuation Cues'], ['escalation_hooks', 'Escalation Hooks'],
+            ['debate_hooks', 'Debate Hooks'], ['suggested_elements', 'Suggested Elements']].forEach(([k, lbl]) => {
+                if (content[k]?.length) {
+                    html += `<div class="content-label">${lbl}</div><div class="tag-row">`;
+                    content[k].forEach(it => { html += `<span class="tag">${esc(it)}</span>`; });
+                    html += `</div>`;
+                }
+            });
+            if (content.target_phoneme)
+                html += `<div class="content-label">Target Phoneme</div><div class="tag-row"><span class="tag">${esc(content.target_phoneme)}</span></div>`;
+            if (content.target_phonemes?.length) {
+                html += `<div class="content-label">Target Phonemes</div><div class="tag-row">`;
+                content.target_phonemes.forEach(p => { html += `<span class="tag">${esc(p)}</span>`; });
+                html += `</div>`;
+            }
+            if (content.difficulty_note)
+                html += `<div class="content-label" style="margin-top:14px">Difficulty Note</div>
+             <p style="font-size:.82rem;color:var(--muted);line-height:1.6;margin-top:4px">${esc(content.difficulty_note)}</p>`;
+            if (content.prosody_notes)
+                html += `<div class="content-label" style="margin-top:12px">Prosody Notes</div>
+             <p style="font-size:.82rem;color:var(--muted);line-height:1.6;margin-top:4px">${esc(content.prosody_notes)}</p>`;
+            return html || `<pre style="font-size:.76rem;color:var(--muted)">${esc(JSON.stringify(content, null, 2))}</pre>`;
+        }
+
+        function renderCard(side, engineId, lesson, elapsed) {
+            const eng = getEngine(engineId);
+            const m = lesson.meta;
+            const cost = m.generation_cost_usd;
+            const costFmt = eng.local ? 'local' : `$${cost.toFixed(6)}`;
+            const lessonsPerDollar = (!eng.local && cost > 0) ? `~${Math.round(1 / cost).toLocaleString()} / $1` : 'no API cost';
+            const ta = m.rubric_scores?.TA ?? m.weighted_score;
+            const isDup = m.is_duplicate;
+
+            const cardEl = document.getElementById('card' + side);
+            cardEl.innerHTML = `
+    <div class="card-accent" style="background:linear-gradient(90deg,${eng.color},transparent)"></div>
+    <div class="card-header">
+      <div class="model-badge">
+        <div class="model-dot" style="background:${eng.color};box-shadow:0 0 8px ${eng.color}"></div>
+        <div>
+          <div class="model-name" style="color:${eng.color}">${eng.label}${eng.local ? '<span class="local-tag">local</span>' : ''}</div>
+          <div class="model-sub">${eng.sub}</div>
+        </div>
+      </div>
+      <span class="gate-badge ${m.passed_quality_gate ? 'pass' : 'fail'}">${m.passed_quality_gate ? 'PASSED' : 'FAILED'}</span>
+    </div>
+    <div class="ceo-section">
+      <div class="ceo-metric">
+        <span class="ceo-metric-label">Cost / Lesson</span>
+        <span class="ceo-metric-value" style="color:${eng.color}">${costFmt}</span>
+        <span class="ceo-metric-sub">${lessonsPerDollar}</span>
+      </div>
+      <div class="ceo-metric">
+        <span class="ceo-metric-label">TA Score</span>
+        <span class="ceo-metric-value">${(ta * 100).toFixed(0)}%</span>
+        <span class="ceo-metric-sub">task adherence</span>
+      </div>
+      <div class="ceo-metric">
+        <span class="ceo-metric-label">Unique</span>
+        <span class="ceo-metric-value">${isDup ? 'No' : 'Yes'}</span>
+        <span class="ceo-metric-sub">${isDup ? 'duplicate detected' : 'semantically unique'}</span>
+      </div>
+    </div>
+    <div class="content-section">
+      <h4>Generated Content</h4>
+      <div>${renderContent(m.lesson_type, lesson.content)}</div>
+    </div>
+    <div class="eng-toggle" id="engToggle${side}" onclick="toggleEng('${side}')">
+      <span class="eng-toggle-label">Engineering Details</span>
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="eng-body" id="engBody${side}">
+      <div class="eng-grid">
+        ${[
+                    ['Model', m.generation_model],
+                    ['Tokens In', `${m.rubric_scores?.input_tokens ?? '?'} tk`],
+                    ['Tokens Out', `${m.rubric_scores?.output_tokens ?? '?'} tk`],
+                    ['Gen Time', elapsed ? `${(elapsed / 1000).toFixed(1)}s` : '—'],
+                    ['Emb Hash', m.embedding_hash || '—'],
+                    ['Dominant', (m.dominant_metrics || []).join(', ') || '—'],
+                    ['Lesson ID', (m.lesson_id || '').slice(0, 8) + '…'],
+                ].map(([l, v]) => `<div class="eng-item"><span class="eng-label">${l}</span><span class="eng-value">${v}</span></div>`).join('')}
+      </div>
+    </div>`;
+
+            // stats bar
+            const pfx = side === 'A' ? 'A' : 'B';
+            document.getElementById('statCost' + pfx).textContent = costFmt;
+            document.getElementById('statTa' + pfx).textContent = (ta * 100).toFixed(0) + '%';
+            document.getElementById('statTime' + pfx).textContent = elapsed ? `${(elapsed / 1000).toFixed(1)}s` : '—';
+
+            hideSkel(side);
+            cardEl.classList.add('visible');
+        }
+
+        function updateDelta() {
+            const engA = getEngine(document.getElementById('engineA').value);
+            const engB = getEngine(document.getElementById('engineB').value);
+            const cA = document.getElementById('statCostA').textContent;
+            const cB = document.getElementById('statCostB').textContent;
+            if (cA === '—' || cB === '—' || cA === 'local' || cB === 'local') return;
+            const vA = parseFloat(cA.replace('$', ''));
+            const vB = parseFloat(cB.replace('$', ''));
+            if (!vA || !vB) return;
+            const cheaper = vA < vB ? engA.label : engB.label;
+            const cheaperColor = vA < vB ? engA.color : engB.color;
+            const pct = Math.round(Math.abs(vA - vB) / Math.max(vA, vB) * 100);
+            document.getElementById('statsDelta').innerHTML =
+                `vs<br><span class="delta-pill" style="background:${cheaperColor}22;color:${cheaperColor}">${cheaper} ${pct}% cheaper</span>`;
+        }
+
+        async function callGenerate(engineId, body) {
+            const t0 = Date.now();
+            const res = await fetch(`${API}/generate?model=${encodeURIComponent(engineId)}`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+            });
+            if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+            return { lesson: await res.json(), elapsed: Date.now() - t0 };
+        }
+
+        async function generateBoth() {
+            const req = buildRequest();
+            const engA = document.getElementById('engineA').value;
+            const engB = document.getElementById('engineB').value;
+            const btn = document.getElementById('genBtn');
+
+            btn.disabled = true; btn.classList.add('loading');
+            document.getElementById('statsBar').classList.add('visible');
+            showSkel('A'); showSkel('B');
+            ['cardA', 'cardB', 'errA', 'errB'].forEach(id => document.getElementById(id).classList.remove('visible'));
+            document.getElementById('statsDelta').textContent = 'vs';
+
+            const [resA, resB] = await Promise.allSettled([
+                callGenerate(engA, req),
+                callGenerate(engB, req),
+            ]);
+
+            if (resA.status === 'fulfilled') {
+                renderCard('A', engA, resA.value.lesson, resA.value.elapsed);
+            } else {
+                hideSkel('A');
+                document.getElementById('errA').classList.add('visible');
+                document.getElementById('errMsgA').textContent = resA.reason?.message || 'Generation failed.';
+            }
+
+            if (resB.status === 'fulfilled') {
+                renderCard('B', engB, resB.value.lesson, resB.value.elapsed);
+            } else {
+                hideSkel('B');
+                document.getElementById('errB').classList.add('visible');
+                document.getElementById('errMsgB').textContent = resB.reason?.message || 'Generation failed.';
+            }
+
+            updateDelta();
+            btn.disabled = false; btn.classList.remove('loading');
+        }
+
+        // init
+        updateEngineColors();
+    </script>
+</body>
+
+</html>

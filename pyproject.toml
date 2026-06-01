@@ -1,0 +1,39 @@
+[project]
+name = "lesson-engine"
+version = "0.1.0"
+description = "Chalk — rubric-native spoken English lesson generation engine"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "python-dotenv",
+    "google-genai",
+    "openai",
+    "sentence-transformers",
+    "faiss-cpu",
+    "sqlalchemy",
+    "aiosqlite",
+    "httpx",
+    "beautifulsoup4",
+    "trafilatura",
+    "lxml",
+    "aiofiles",
+    "langdetect",
+    "torch==2.5.1+cu121",
+    "torchvision==0.20.1+cu121",
+    "torchaudio==2.5.1+cu121",
+]
+
+[tool.uv]
+extra-index-url = ["https://download.pytorch.org/whl/cu121"]
+
+[[tool.uv.index]]
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu121" }
+torchvision = { index = "pytorch-cu121" }
+torchaudio = { index = "pytorch-cu121" }

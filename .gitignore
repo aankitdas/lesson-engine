@@ -1,0 +1,23 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+.env
+
+# ML artifacts — model weights, checkpoints, GGUF exports
+finetune/output/
+unsloth_compiled_cache/
+
+# Generated training data — reproducible via prep_dataset.py
+finetune/data/*.jsonl
+finetune/data/progress.json
+
+# Runtime-generated indices and databases
+vectorstore/index.faiss
+chalk.db
